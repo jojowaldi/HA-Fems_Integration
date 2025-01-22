@@ -1,0 +1,10 @@
+{
+    "domain": "fems_integration",
+    "name": "Fenecon Fems Integration",
+    "version": "1.0.0",
+    "documentation": "https://github.com/jojowaldi/fems_integration",
+    "requirements": ["requests"],
+    "codeowners": ["@jojowaldi"],
+    "config_flow": true
+  }
+  

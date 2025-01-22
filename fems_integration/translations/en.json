@@ -1,0 +1,16 @@
+{
+    "config": {
+      "step": {
+        "user": {
+          "title": "Configure Fenecon Fems Integration",
+          "description": "Enter the IP address and credentials of your device.",
+          "data": {
+            "ip_address": "IP Address",
+            "username": "Username",
+            "password": "Password"
+          }
+        }
+      }
+    }
+  }
+  
