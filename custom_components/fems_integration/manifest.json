@@ -2,7 +2,7 @@
     "domain": "fems_integration",
     "name": "Fenecon Fems Integration",
     "version": "1.0.0",
-    "documentation": "https://github.com/jojowaldi/fems_integration",
+    "documentation": "https://github.com/jojowaldi/HA-Fems_Integration",
     "requirements": ["requests"],
     "codeowners": ["@jojowaldi"],
     "config_flow": true

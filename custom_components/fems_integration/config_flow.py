@@ -2,7 +2,7 @@ from homeassistant import config_entries
 import voluptuous as vol
 from . import DOMAIN
 
-class MyIntegrationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class FemsIntegrationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for the Fenecon Fems Integration."""
 
     VERSION = 1
