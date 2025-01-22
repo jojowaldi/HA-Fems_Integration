@@ -3,6 +3,7 @@
     "name": "Fenecon Fems Integration",
     "version": "1.0.0",
     "documentation": "https://github.com/jojowaldi/HA-Fems_Integration",
+    "issue_tracker": "https://github.com/jojowaldi/HA-Fems_Integration/issues",
     "requirements": ["requests"],
     "codeowners": ["@jojowaldi"],
     "config_flow": true
