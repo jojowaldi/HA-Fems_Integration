@@ -1,6 +1,7 @@
 from homeassistant.helpers.entity import Entity
 from homeassistant.const import CONF_IP_ADDRESS, CONF_USERNAME, CONF_PASSWORD
 import requests
+from homeassistant.util import dt as dt_util
 
 DOMAIN = "fems_integration"
 
@@ -43,8 +44,13 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     base_url = f"http://{ip_address}/rest/channel/_sum/"
 
     sensors = []
+    # Bestehende Sensoren für die einzelnen Datenpunkte hinzufügen
     for point in DATA_POINTS:
         sensors.append(MyIntegrationSensor(session, base_url, point))
+    
+    # Neuen Sensor für den täglichen Verbrauch hinzufügen
+    sensors.append(DailyConsumptionSensor(session, base_url))
+    
     async_add_entities(sensors, True)
 
 class MyIntegrationSensor(Entity):
@@ -84,3 +90,69 @@ class MyIntegrationSensor(Entity):
         except requests.RequestException as e:
             self._state = "Error"
             self._unit = None
+
+class DailyConsumptionSensor(Entity):
+    """Sensor zur Berechnung des täglichen Energieverbrauchs in kWh
+       durch Integration der ConsumptionActivePower (in Watt) über die Zeit.
+    """
+
+    def __init__(self, session, base_url):
+        self._session = session
+        self._base_url = base_url
+        self._daily_energy = 0.0  # akkumulierte Energie in kWh
+        self._last_update = None  # Zeitpunkt des letzten Updates
+        self._state = None
+
+    @property
+    def name(self):
+        """Name des Sensors."""
+        return "Fenecon Daily Consumption"
+
+    @property
+    def state(self):
+        """Aktueller Tagesverbrauch in kWh (auf 3 Nachkommastellen gerundet)."""
+        if self._state is not None:
+            return round(self._state, 3)
+        return None
+
+    @property
+    def unit_of_measurement(self):
+        """Einheit der Messung."""
+        return "kWh"
+
+    def update(self):
+        """Berechne den täglichen Verbrauch:
+           - Hole die aktuelle ConsumptionActivePower (Watt).
+           - Berechne die seit dem letzten Update verstrichene Zeit.
+           - Integriere die Leistung (Watt * Zeit) zu Energie (kWh).
+           - Setze den Tageszähler bei Tageswechsel zurück.
+        """
+        now = dt_util.now()
+
+        # Tageswechsel erkennen und den Zähler zurücksetzen
+        if self._last_update is not None and now.date() != self._last_update.date():
+            self._daily_energy = 0.0
+
+        # Aktuellen Wert von ConsumptionActivePower abrufen
+        try:
+            url = f"{self._base_url}ConsumptionActivePower"
+            response = self._session.get(url)
+            response.raise_for_status()
+            data = response.json()
+            consumption_power = data.get("value", None)
+            if consumption_power is None:
+                return
+            consumption_power = float(consumption_power)
+        except Exception as e:
+            # Im Fehlerfall einfach nichts integrieren
+            return
+
+        if self._last_update is not None:
+            # Berechne die verstrichene Zeit in Sekunden
+            dt_seconds = (now - self._last_update).total_seconds()
+            # Umrechnung: (Watt * Sekunden) in kWh => (W * s) / (3600 * 1000)
+            # (Hier: Annahme, dass consumption_power in Watt geliefert wird)
+            self._daily_energy += consumption_power * dt_seconds / 3600000.0
+
+        self._last_update = now
+        self._state = self._daily_energy
