@@ -1,4 +1,5 @@
 from homeassistant.helpers.entity import Entity
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.const import CONF_IP_ADDRESS, CONF_USERNAME, CONF_PASSWORD
 import requests
 from homeassistant.util import dt as dt_util
@@ -100,7 +101,7 @@ class MyIntegrationSensor(Entity):
             self._state = "Error"
             self._unit = None
 
-class DailyConsumptionSensor(Entity):
+class DailyConsumptionSensor(SensorEntity):
     """Sensor zur Berechnung des täglichen Energieverbrauchs in kWh
        durch Integration der ConsumptionActivePower (in Watt) über die Zeit.
     """
@@ -176,7 +177,7 @@ class DailyConsumptionSensor(Entity):
         self._last_update = now
         self._state = self._daily_energy
 
-class DailyGridFeedInSensor(Entity):
+class DailyGridFeedInSensor(SensorEntity):
     """Sensor zur Berechnung der täglichen Netzeinspeisung in kWh."""
 
     def __init__(self, session, base_url):
@@ -241,7 +242,7 @@ class DailyGridFeedInSensor(Entity):
         self._last_update = now
         self._state = self._daily_feed_in
 
-class DailyGridConsumptionSensor(Entity):
+class DailyGridConsumptionSensor(SensorEntity):
     """Sensor zur Berechnung des täglichen Netzbezugs in kWh."""
 
     def __init__(self, session, base_url):
