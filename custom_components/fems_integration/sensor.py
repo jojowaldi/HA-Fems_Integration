@@ -78,6 +78,11 @@ class MyIntegrationSensor(Entity):
         """Return the unit of measurement."""
         return self._unit
 
+    @property
+    def device_class(self):
+        """Return the device class of the sensor."""
+        return "energy"
+
     def update(self):
         """Fetch the latest data."""
         try:
@@ -119,6 +124,11 @@ class DailyConsumptionSensor(Entity):
     def unit_of_measurement(self):
         """Einheit der Messung."""
         return "kWh"
+
+    @property
+    def device_class(self):
+        """Return the device class of the sensor."""
+        return "energy"
 
     def update(self):
         """Berechne den täglichen Verbrauch:
