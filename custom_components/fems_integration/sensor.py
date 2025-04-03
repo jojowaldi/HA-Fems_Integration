@@ -133,6 +133,11 @@ class DailyConsumptionSensor(Entity):
     def device_class(self):
         """Return the device class of the sensor."""
         return "energy"
+    
+    @property
+    def state_class(self):
+        """Return the state class of the sensor."""
+        return "total_increasing"
 
     def update(self):
         """Berechne den täglichen Verbrauch:
