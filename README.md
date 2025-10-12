@@ -5,7 +5,7 @@
 
 ## Overview
 
-This is a custom integration for HomeAssistant HACS that allows you to monitor and control your Fenecon Fems systems. The integration requires the IP address, username, and password of your Fenecon Fems device.
+This is a custom integration for HomeAssistant HACS that allows you to monitor your Fenecon Fems systems. The integration requires the IP address, username, and password of your Fenecon Fems device.
 
 ## Installation
 
@@ -54,6 +54,11 @@ The integration provides the following data points:
 - EssDcDischargeEnergy
 - EssDischargePower
 - GridMode
+- Daily Consumption
+- Daily Grid Consumption
+- Daily Grid Feed-In
+Notice the last three data points are not 100% accurate and may vary slightly from the values shown in the Fenecon Fems app.
+However, they should be close enough for general monitoring purposes and can be used for HomeAssistant's energy management features.
 
 ## Troubleshooting
 
