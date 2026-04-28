@@ -34,6 +34,20 @@ DATA_POINTS = [
     "GridMode",
 ]
 
+def _device_class_for_point(point):
+    if "Energy" in point:
+        return "energy"
+    if "Power" in point:
+        return "power"
+    return None
+
+def _state_class_for_device_class(device_class):
+    if device_class == "power":
+        return "measurement"
+    if device_class == "energy":
+        return "total_increasing"
+    return None
+
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up sensors based on the config entry."""
     ip_address = config_entry.data[CONF_IP_ADDRESS]
@@ -67,6 +81,8 @@ class MyIntegrationSensor(Entity):
         self._point = point
         self._state = None
         self._unit = None
+        self._device_class = _device_class_for_point(point)
+        self._state_class = _state_class_for_device_class(self._device_class)
 
     @property
     def name(self):
@@ -86,7 +102,12 @@ class MyIntegrationSensor(Entity):
     @property
     def device_class(self):
         """Return the device class of the sensor."""
-        return "energy"
+        return self._device_class
+
+    @property
+    def state_class(self):
+        """Return the state class of the sensor."""
+        return self._state_class
 
     def update(self):
         """Fetch the latest data."""
