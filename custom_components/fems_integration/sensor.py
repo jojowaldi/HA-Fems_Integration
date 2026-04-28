@@ -1,4 +1,3 @@
-from homeassistant.helpers.entity import Entity
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.const import CONF_IP_ADDRESS, CONF_USERNAME, CONF_PASSWORD
 from homeassistant.helpers.restore_state import RestoreEntity
@@ -49,6 +48,19 @@ def _state_class_for_device_class(device_class):
         return "total_increasing"
     return None
 
+def _unit_for_point(point, api_unit):
+    if api_unit:
+        return api_unit
+    if "ReactivePower" in point:
+        return "var"
+    if "Energy" in point:
+        return "Wh"
+    if "Power" in point:
+        return "W"
+    if point == "EssSoc":
+        return "%"
+    return None
+
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up sensors based on the config entry."""
     ip_address = config_entry.data[CONF_IP_ADDRESS]
@@ -73,7 +85,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     
     async_add_entities(sensors, True)
 
-class MyIntegrationSensor(Entity):
+class MyIntegrationSensor(SensorEntity):
     """Representation of a single data point as a sensor."""
 
     def __init__(self, session, base_url, point):
@@ -118,7 +130,7 @@ class MyIntegrationSensor(Entity):
             response.raise_for_status()
             data = response.json()
             self._state = data.get("value", "N/A")
-            self._unit = data.get("unit", None)
+            self._unit = _unit_for_point(self._point, data.get("unit", None))
         except requests.RequestException as e:
             self._state = "Error"
             self._unit = None
