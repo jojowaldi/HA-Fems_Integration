@@ -1,6 +1,7 @@
 from homeassistant.helpers.entity import Entity
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.const import CONF_IP_ADDRESS, CONF_USERNAME, CONF_PASSWORD
+from homeassistant.helpers.restore_state import RestoreEntity
 import requests
 from homeassistant.util import dt as dt_util
 
@@ -122,7 +123,7 @@ class MyIntegrationSensor(Entity):
             self._state = "Error"
             self._unit = None
 
-class DailyConsumptionSensor(SensorEntity):
+class DailyConsumptionSensor(SensorEntity, RestoreEntity):
     """Sensor zur Berechnung des täglichen Energieverbrauchs in kWh
        durch Integration der ConsumptionActivePower (in Watt) über die Zeit.
     """
@@ -132,6 +133,7 @@ class DailyConsumptionSensor(SensorEntity):
         self._base_url = base_url
         self._daily_energy = 0.0  # akkumulierte Energie in kWh
         self._last_update = None  # Zeitpunkt des letzten Updates
+        self._last_reset_date = None
         self._state = None
 
     @property
@@ -161,6 +163,49 @@ class DailyConsumptionSensor(SensorEntity):
         """Return the state class of the sensor."""
         return "total_increasing"
 
+    @property
+    def extra_state_attributes(self):
+        attrs = {}
+        if self._last_update is not None:
+            attrs["last_update"] = dt_util.as_local(self._last_update).isoformat()
+        if self._last_reset_date is not None:
+            attrs["last_reset"] = self._last_reset_date.isoformat()
+        return attrs
+
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        last_state = await self.async_get_last_state()
+        if last_state is None:
+            self._last_reset_date = dt_util.now().date()
+            return
+
+        try:
+            restored_value = float(last_state.state)
+        except (TypeError, ValueError):
+            restored_value = None
+
+        if restored_value is not None:
+            self._daily_energy = restored_value
+            self._state = restored_value
+
+        last_reset = last_state.attributes.get("last_reset")
+        if last_reset:
+            parsed = dt_util.parse_date(last_reset)
+            if parsed is not None:
+                self._last_reset_date = parsed
+
+        last_update = last_state.attributes.get("last_update")
+        if last_update:
+            parsed = dt_util.parse_datetime(last_update)
+            if parsed is not None:
+                self._last_update = parsed
+
+        if self._last_reset_date is None:
+            if self._last_update is not None:
+                self._last_reset_date = self._last_update.date()
+            else:
+                self._last_reset_date = dt_util.now().date()
+
     def update(self):
         """Berechne den täglichen Verbrauch:
            - Hole die aktuelle ConsumptionActivePower (Watt).
@@ -171,8 +216,12 @@ class DailyConsumptionSensor(SensorEntity):
         now = dt_util.now()
 
         # Tageswechsel erkennen und den Zähler zurücksetzen
-        if self._last_update is not None and now.date() != self._last_update.date():
+        if self._last_reset_date is None:
+            self._last_reset_date = now.date()
+        if now.date() != self._last_reset_date:
             self._daily_energy = 0.0
+            self._last_reset_date = now.date()
+            self._last_update = None
 
         # Aktuellen Wert von ConsumptionActivePower abrufen
         try:
@@ -198,7 +247,7 @@ class DailyConsumptionSensor(SensorEntity):
         self._last_update = now
         self._state = self._daily_energy
 
-class DailyGridFeedInSensor(SensorEntity):
+class DailyGridFeedInSensor(SensorEntity, RestoreEntity):
     """Sensor zur Berechnung der täglichen Netzeinspeisung in kWh."""
 
     def __init__(self, session, base_url):
@@ -206,6 +255,7 @@ class DailyGridFeedInSensor(SensorEntity):
         self._base_url = base_url
         self._daily_feed_in = 0.0  # akkumulierte Einspeisung in kWh
         self._last_update = None
+        self._last_reset_date = None
         self._state = None
 
     @property
@@ -235,13 +285,60 @@ class DailyGridFeedInSensor(SensorEntity):
         """Return the state class of the sensor."""
         return "total_increasing"
 
+    @property
+    def extra_state_attributes(self):
+        attrs = {}
+        if self._last_update is not None:
+            attrs["last_update"] = dt_util.as_local(self._last_update).isoformat()
+        if self._last_reset_date is not None:
+            attrs["last_reset"] = self._last_reset_date.isoformat()
+        return attrs
+
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        last_state = await self.async_get_last_state()
+        if last_state is None:
+            self._last_reset_date = dt_util.now().date()
+            return
+
+        try:
+            restored_value = float(last_state.state)
+        except (TypeError, ValueError):
+            restored_value = None
+
+        if restored_value is not None:
+            self._daily_feed_in = restored_value
+            self._state = restored_value
+
+        last_reset = last_state.attributes.get("last_reset")
+        if last_reset:
+            parsed = dt_util.parse_date(last_reset)
+            if parsed is not None:
+                self._last_reset_date = parsed
+
+        last_update = last_state.attributes.get("last_update")
+        if last_update:
+            parsed = dt_util.parse_datetime(last_update)
+            if parsed is not None:
+                self._last_update = parsed
+
+        if self._last_reset_date is None:
+            if self._last_update is not None:
+                self._last_reset_date = self._last_update.date()
+            else:
+                self._last_reset_date = dt_util.now().date()
+
     def update(self):
         """Berechne die tägliche Einspeisung."""
         now = dt_util.now()
 
         # Tageswechsel erkennen und den Zähler zurücksetzen
-        if self._last_update is not None and now.date() != self._last_update.date():
+        if self._last_reset_date is None:
+            self._last_reset_date = now.date()
+        if now.date() != self._last_reset_date:
             self._daily_feed_in = 0.0
+            self._last_reset_date = now.date()
+            self._last_update = None
 
         # Aktuellen Wert von GridActivePower abrufen
         try:
@@ -250,9 +347,13 @@ class DailyGridFeedInSensor(SensorEntity):
             response.raise_for_status()
             data = response.json()
             grid_power = data.get("value", None)
-            if grid_power is None or grid_power >= 0:
+            if grid_power is None:
                 return
-            grid_power = abs(float(grid_power))  # Nur negative Werte (Einspeisung)
+            grid_power = float(grid_power)
+            if grid_power >= 0:
+                grid_power = 0.0
+            else:
+                grid_power = abs(grid_power)  # Nur negative Werte (Einspeisung)
         except Exception as e:
             return
 
@@ -263,7 +364,7 @@ class DailyGridFeedInSensor(SensorEntity):
         self._last_update = now
         self._state = self._daily_feed_in
 
-class DailyGridConsumptionSensor(SensorEntity):
+class DailyGridConsumptionSensor(SensorEntity, RestoreEntity):
     """Sensor zur Berechnung des täglichen Netzbezugs in kWh."""
 
     def __init__(self, session, base_url):
@@ -271,6 +372,7 @@ class DailyGridConsumptionSensor(SensorEntity):
         self._base_url = base_url
         self._daily_consumption = 0.0  # akkumulierter Bezug in kWh
         self._last_update = None
+        self._last_reset_date = None
         self._state = None
 
     @property
@@ -300,13 +402,60 @@ class DailyGridConsumptionSensor(SensorEntity):
         """Return the state class of the sensor."""
         return "total_increasing"
 
+    @property
+    def extra_state_attributes(self):
+        attrs = {}
+        if self._last_update is not None:
+            attrs["last_update"] = dt_util.as_local(self._last_update).isoformat()
+        if self._last_reset_date is not None:
+            attrs["last_reset"] = self._last_reset_date.isoformat()
+        return attrs
+
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        last_state = await self.async_get_last_state()
+        if last_state is None:
+            self._last_reset_date = dt_util.now().date()
+            return
+
+        try:
+            restored_value = float(last_state.state)
+        except (TypeError, ValueError):
+            restored_value = None
+
+        if restored_value is not None:
+            self._daily_consumption = restored_value
+            self._state = restored_value
+
+        last_reset = last_state.attributes.get("last_reset")
+        if last_reset:
+            parsed = dt_util.parse_date(last_reset)
+            if parsed is not None:
+                self._last_reset_date = parsed
+
+        last_update = last_state.attributes.get("last_update")
+        if last_update:
+            parsed = dt_util.parse_datetime(last_update)
+            if parsed is not None:
+                self._last_update = parsed
+
+        if self._last_reset_date is None:
+            if self._last_update is not None:
+                self._last_reset_date = self._last_update.date()
+            else:
+                self._last_reset_date = dt_util.now().date()
+
     def update(self):
         """Berechne den täglichen Netzbezug."""
         now = dt_util.now()
 
         # Tageswechsel erkennen und den Zähler zurücksetzen
-        if self._last_update is not None and now.date() != self._last_update.date():
+        if self._last_reset_date is None:
+            self._last_reset_date = now.date()
+        if now.date() != self._last_reset_date:
             self._daily_consumption = 0.0
+            self._last_reset_date = now.date()
+            self._last_update = None
 
         # Aktuellen Wert von GridActivePower abrufen
         try:
@@ -315,9 +464,11 @@ class DailyGridConsumptionSensor(SensorEntity):
             response.raise_for_status()
             data = response.json()
             grid_power = data.get("value", None)
-            if grid_power is None or grid_power <= 0:
+            if grid_power is None:
                 return
-            grid_power = float(grid_power)  # Nur positive Werte (Bezug)
+            grid_power = float(grid_power)
+            if grid_power <= 0:
+                grid_power = 0.0
         except Exception as e:
             return
 
