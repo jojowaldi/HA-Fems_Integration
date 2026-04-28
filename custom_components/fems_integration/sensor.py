@@ -48,9 +48,23 @@ def _state_class_for_device_class(device_class):
         return "total_increasing"
     return None
 
+def _normalize_unit(api_unit):
+    if not isinstance(api_unit, str):
+        return None
+    if "[Wh]" in api_unit or api_unit == "Wh" or "Wattstunden" in api_unit:
+        return "Wh"
+    if "[W]" in api_unit or api_unit == "W" or api_unit == "Watt":
+        return "W"
+    if "[var]" in api_unit or api_unit == "var" or "Voltampere" in api_unit:
+        return "var"
+    if "[%]" in api_unit or api_unit == "%" or "Prozent" in api_unit:
+        return "%"
+    return api_unit
+
 def _unit_for_point(point, api_unit):
-    if api_unit:
-        return api_unit
+    normalized = _normalize_unit(api_unit)
+    if normalized:
+        return normalized
     if "ReactivePower" in point:
         return "var"
     if "Energy" in point:
