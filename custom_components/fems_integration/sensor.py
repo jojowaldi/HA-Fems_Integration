@@ -51,9 +51,9 @@ def _state_class_for_device_class(device_class):
 def _normalize_unit(api_unit):
     if not isinstance(api_unit, str):
         return None
-    if "[Wh]" in api_unit or api_unit == "Wh" or "Wattstunden" in api_unit:
+    if "[Wh]" in api_unit or api_unit == "Wh" or "Wattstunden" in api_unit or api_unit.startswith("Wh"):
         return "Wh"
-    if "[W]" in api_unit or api_unit == "W" or api_unit == "Watt":
+    if "[W]" in api_unit or api_unit == "W" or api_unit == "Watt" or api_unit.startswith("W"):
         return "W"
     if "[var]" in api_unit or api_unit == "var" or "Voltampere" in api_unit:
         return "var"
